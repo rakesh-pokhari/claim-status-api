@@ -1,0 +1,14 @@
+[
+  {
+    "id": "1001",
+    "status": "IN_PROGRESS",
+    "amount": 5000,
+    "type": "Auto"
+  },
+  {
+    "id": "1002",
+    "status": "APPROVED",
+    "amount": 12000,
+    "type": "Home"
+  }
+]

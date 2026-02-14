@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: claim-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: claim-api
+  template:
+    metadata:
+      labels:
+        app: claim-api
+    spec:
+      containers:
+        - name: claim-api
+          image: 932490240713.dkr.ecr.us-east-1.amazonaws.com/claim-status-api:latest
+          ports:
+            - containerPort: 8080
