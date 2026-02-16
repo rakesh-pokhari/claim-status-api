@@ -10,6 +10,8 @@ app = FastAPI()
 
 dynamodb = boto3.resource("dynamodb", region_name="us-east-1")
 table = dynamodb.Table("claims")
+bedrock = boto3.client("bedrock-runtime", region_name="us-east-1")
+
 
 
 class Claim(BaseModel):
@@ -33,7 +35,22 @@ def create_claim(claim: Claim):
     )
 
     return {"message": "Claim created", "claimId": claim_id}
+@app.post("/analyze")
+def analyze(text: str):
 
+    response = bedrock.invoke_model(
+        modelId="anthropic.claude-3-haiku-20240307-v1:0",
+        body=json.dumps({
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 200,
+            "messages": [
+                {"role": "user", "content": text}
+            ]
+        })
+    )
+
+    result = json.loads(response["body"].read())
+    return result
 
 @app.get("/claims/{claim_id}")
 def get_claim(claim_id: str):
