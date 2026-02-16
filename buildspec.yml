@@ -1,4 +1,30 @@
-post_build:
-  commands:
-    - aws eks update-kubeconfig --region us-east-1 --name claim-cluster
-    - kubectl set image deployment/claim-api claim-api=071517866612.dkr.ecr.us-east-1.amazonaws.com/claim-status-api:latest
+version: 0.2
+
+env:
+  variables:
+    AWS_DEFAULT_REGION: us-east-1
+    CLUSTER_NAME: claim-cluster
+    REPOSITORY_URI: 071517866612.dkr.ecr.us-east-1.amazonaws.com/claim-status-api
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $REPOSITORY_URI
+      - IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+
+  build:
+    commands:
+      - echo Build started on `date`
+      - docker build -t claim-status-api .
+      - docker tag claim-status-api:latest $REPOSITORY_URI:$IMAGE_TAG
+      - docker tag claim-status-api:latest $REPOSITORY_URI:latest
+
+  post_build:
+    commands:
+      - echo Pushing Docker images...
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - docker push $REPOSITORY_URI:latest
+      - echo Updating kubeconfig...
+      - aws eks update-kubeconfig --region $AWS_DEFAULT_REGION --name $CLUSTER_NAME
+      - kubectl set image deployment/claim-api claim-api=$REPOSITORY_URI:$IMAGE_TAG
