@@ -2,6 +2,8 @@ import boto3
 from fastapi import FastAPI
 from pydantic import BaseModel
 import uuid
+from decimal import Decimal
+
 
 app = FastAPI()
 
@@ -21,10 +23,10 @@ def create_claim(claim: Claim):
 
     table.put_item(
         Item={
-            "claim_id": claim_id,
+            "claimId": claim_id,
             "user": claim.user,
-            "amount": claim.amount,
-            "status": claim.status,
+            "amount": Decimal(str(claim.amount)),
+            "status": claim.status
         }
     )
 
