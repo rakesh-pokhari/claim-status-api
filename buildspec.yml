@@ -25,6 +25,9 @@ phases:
       - echo Pushing Docker images...
       - docker push $REPOSITORY_URI:$IMAGE_TAG
       - docker push $REPOSITORY_URI:latest
+      - echo Checking AWS identity...
+      - aws sts get-caller-identity
       - echo Updating kubeconfig...
       - aws eks update-kubeconfig --region $AWS_DEFAULT_REGION --name $CLUSTER_NAME
+      - kubectl get nodes
       - kubectl set image deployment/claim-api claim-api=$REPOSITORY_URI:$IMAGE_TAG
