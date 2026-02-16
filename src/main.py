@@ -1,8 +1,9 @@
 import boto3
 from fastapi import FastAPI
 from pydantic import BaseModel
-import uuid
 from decimal import Decimal
+import json
+import uuid
 
 
 app = FastAPI()
@@ -19,18 +20,20 @@ class Claim(BaseModel):
 
 @app.post("/claims")
 def create_claim(claim: Claim):
+
     claim_id = str(uuid.uuid4())
 
-    table.put_item(
-        Item={
-            "claimId": claim_id,
-            "user": claim.user,
-            "amount": Decimal(str(claim.amount)),
-            "status": claim.status
-        }
+    # Convert entire object safely to Decimal
+    item = json.loads(
+        json.dumps(claim.dict()),
+        parse_float=Decimal
     )
 
-    return {"message": "Claim created", "claim_id": claim_id}
+    item["claimId"] = claim_id
+
+    table.put_item(Item=item)
+
+    return {"message": "Claim created", "claimId": claim_id}
 
 
 @app.get("/claims/{claim_id}")
