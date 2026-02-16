@@ -23,15 +23,14 @@ def create_claim(claim: Claim):
 
     claim_id = str(uuid.uuid4())
 
-    # Convert entire object safely to Decimal
-    item = json.loads(
-        json.dumps(claim.dict()),
-        parse_float=Decimal
+    table.put_item(
+        Item={
+            "claimId": claim_id,
+            "user": claim.user,
+            "amount": Decimal(str(claim.amount)),
+            "status": claim.status
+        }
     )
-
-    item["claimId"] = claim_id
-
-    table.put_item(Item=item)
 
     return {"message": "Claim created", "claimId": claim_id}
 
