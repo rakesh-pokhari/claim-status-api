@@ -1,20 +1,37 @@
-from fastapi import FastAPI, HTTPException
-from src.services.claim_service import get_claim
-from src.services.summary_service import summarize_claim
+import boto3
+from fastapi import FastAPI
+from pydantic import BaseModel
+import uuid
 
 app = FastAPI()
 
+dynamodb = boto3.resource("dynamodb", region_name="us-east-1")
+table = dynamodb.Table("claims")
+
+
+class Claim(BaseModel):
+    user: str
+    amount: float
+    status: str
+
+
+@app.post("/claims")
+def create_claim(claim: Claim):
+    claim_id = str(uuid.uuid4())
+
+    table.put_item(
+        Item={
+            "claim_id": claim_id,
+            "user": claim.user,
+            "amount": claim.amount,
+            "status": claim.status,
+        }
+    )
+
+    return {"message": "Claim created", "claim_id": claim_id}
+
+
 @app.get("/claims/{claim_id}")
-def fetch_claim(claim_id: str):
-    claim = get_claim(claim_id)
-    if not claim:
-        raise HTTPException(status_code=404, detail="Claim not found")
-    return claim
-
-
-@app.post("/claims/{claim_id}/summarize")
-def summarize(claim_id: str):
-    result = summarize_claim(claim_id)
-    if not result:
-        raise HTTPException(status_code=404, detail="Claim not found")
-    return result
+def get_claim(claim_id: str):
+    response = table.get_item(Key={"claim_id": claim_id})
+    return response.get("Item", {})

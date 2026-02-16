@@ -12,6 +12,7 @@ spec:
       labels:
         app: claim-api
     spec:
+      serviceAccountName: claim-sa   # 👈 ADD THIS LINE
       containers:
         - name: claim-api
           image: 071517866612.dkr.ecr.us-east-1.amazonaws.com/claim-status-api:latest
