@@ -25,7 +25,7 @@ def create_claim(claim: Claim):
 
     table.put_item(
         Item={
-            "claimId": claim_id,
+            "claim_id": claim_id,
             "user": claim.user,
             "amount": Decimal(str(claim.amount)),
             "status": claim.status
