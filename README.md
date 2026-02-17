@@ -1,142 +1,193 @@
-Claim Processing API – EKS + DynamoDB + Bedrock
- Overview
+AI-Enabled Claim Status API on Amazon EKS
+1. Overview
+    This project implements a GenAI-enabled Claim Status API deployed on Amazon EKS (EC2 worker nodes) with full CI/CD automation, IAM role-based security (IRSA), and AI-powered summarization using Amazon Bedrock.
+    The solution demonstrates enterprise-grade Kubernetes deployment patterns while integrating GenAI into a business workflow.
+    This implementation follows outcome-driven architectural design principles under controlled service constraints.
 
-This project is a cloud-native claim processing microservice built using:
+2. Architecture Overview
+    High-Level Flow
+    
+   Client
+     ↓
+ Kubernetes Service (EKS)
+     ↓
+ FastAPI Application
+     ↓
+ DynamoDB (Claim Data)
+     ↓
+ Amazon Bedrock (AI Summarization)
+ CI/CD:
+ GitHub → CodePipeline → CodeBuild → ECR → EKS Deployment
+ Security:
+ IRSA → IAM Role → Bedrock + DynamoDB permissions
 
-FastAPI (Python)
+3. AWS Services Used
+Service	Purpose
+Amazon EKS	Kubernetes control plane
+Amazon EC2	Worker nodes
+Amazon ECR	Container image repository
+Amazon DynamoDB	Claim status data store
+Amazon Bedrock	AI summarization
+AWS CodePipeline	CI/CD orchestration
+AWS CodeBuild	Build + image publish + deploy
+IAM (IRSA)	Pod-level permissions
+CloudWatch	Logs and metrics
 
-Amazon EKS (Kubernetes)
-
-Amazon DynamoDB
-
-Amazon Bedrock (Claude 3 Haiku)
-
-Amazon ECR
-
-AWS CodePipeline + CodeBuild (CI/CD)
-
-IRSA (IAM Roles for Service Accounts)
-
-The system allows:
-
-Creating insurance claims
-
-Storing them in DynamoDB
-
-Running AI-based claim analysis using Amazon Bedrock
-
-🏗 Architecture
-Client (curl / Swagger UI)
-        ↓
-Application Load Balancer
-        ↓
-Kubernetes Service (EKS)
-        ↓
-FastAPI Pod
-        ↓
-IRSA Role (Secure IAM Access)
-        ↓
-DynamoDB (Claims Storage)
-        ↓
-Amazon Bedrock (AI Analysis)
-
-📦 Features
+4. Functional Endpoints
 1️⃣ Create Claim
-
-POST /claims
-
-Stores claim in DynamoDB table claims.
-
-Example request:
-
-{
-  "user": "Test",
-  "amount": 1000,
-  "status": "Pending"
-}
-
-2️⃣ Analyze Claim (AI Powered)
-
-POST /analyze
-
-Uses Amazon Bedrock (Claude 3 Haiku) to analyze claim text.
-
-Example:
-
-{
-  "text": "Customer reported broken screen and is requesting refund."
-}
+     POST /claims
 
 
-Returns AI-generated analysis.
+    Creates a new claim record in DynamoDB.
+    
+    Request:
+    
+    {
+      "user": "John Doe",
+      "amount": 250.00,
+      "status": "Pending"
+    }
+    
+    
+    Response:
+    
+    {
+      "message": "Claim created",
+      "claimId": "uuid"
+    }
+    
+    2️⃣ Get Claim
+    GET /claims/{claim_id}
+    
+    
+    Fetches claim details from DynamoDB.
+    
+    3️⃣ Analyze Claim (GenAI)
+    POST /analyze
+    
+    
+    Request:
+    
+    {
+      "text": "Customer reported broken screen and is requesting refund."
+    }
+    
+    
+    This endpoint:
+    
+    Invokes Amazon Bedrock (Claude model)
+    
+    Generates structured AI guidance
+    
+    Returns summarized next-step recommendations
 
-🔐 Security Design
+5. GenAI Integration
+    Amazon Bedrock (Claude model) is invoked using:
+    bedrock = boto3.client("bedrock-runtime", region_name="us-east-1")
+    The model is used for:
+    Claim text summarization
+    Recommendation generation
+    Decision support guidance
+    The integration uses IRSA for secure credential injection.
 
-This project follows AWS best practices:
+6. Security Model
+    IAM Roles for Service Accounts (IRSA)
+    The Kubernetes service account is mapped to:
+    claim-api-irsa-role
+    Attached Policies:
+    AmazonBedrockFullAccess
+    AmazonDynamoDBFullAccess
+    Custom IRSA policy
+    This ensures:
+    No static credentials
+    The Least privilege access
+    Pod-level IAM isolation
 
-✅ IRSA (IAM Roles for Service Accounts)
+7. CI/CD Pipeline
 
-Pods assume a dedicated IAM role:
+    Pipeline Stages:
+    Source – GitHub
+    Build – CodeBuild
+    Docker image build
+    Push to ECR
+    Kubernetes deployment update
+    Pipeline ensures:
+    Automated image builds
+    Versioned deployments
+    Repeatable release process
 
-Access to DynamoDB
+8. Kubernetes Deployment
 
-Access to Bedrock
+    Deployment includes:
+    2 replicas
+    Readiness probe
+    LoadBalancer service exposure
+    Image from private ECR
+    Example:
+    
+    replicas: 2
+    readinessProbe:
+      httpGet:
+        path: /docs
+        port: 8080
 
-No static AWS credentials stored anywhere.
+9. Observability
 
-✅ Private Container Registry
+    Application logs streamed to CloudWatch
+    Kubernetes pod health checks
+    Load balancer monitoring
+    Bedrock invocation metrics available via AWS console
 
-Images stored in:
+10. Trade-offs and Design Decisions
+    
+    Decision	Rationale
+    Used LoadBalancer instead of API Gateway	Reduced complexity for lab timeline
+    Direct text summarization instead of S3	Simplified GenAI flow
+    Used AWS-managed policies	Faster secure setup
+    Used EKS EC2 instead of Fargate	Meets lab constraint
 
-Amazon ECR
+11. Lessons Learned
 
-✅ CI/CD Pipeline
+    DynamoDB requires Decimal type for numeric fields
+    
+    IRSA trust relationship must include sub condition
+    
+    Bedrock models require first-time use-case approval
+    
+    NAT gateways incur hidden cost if not cleaned
+    
+    Image tags must be updated on deployment
 
-Source: GitHub
+12. Cleanup Procedure
 
-Build: CodeBuild
+    To avoid unnecessary cost:
+    
+    Delete EKS cluster
+    
+    Delete NAT Gateway
+    
+    Delete Load Balancers
+    
+    Delete ECR repository
+    
+    Delete DynamoDB table
+    
+    Delete IAM roles
 
-Push: ECR
+13. Repository Structure
+    
+    src/              Application source
+    k8s/              Kubernetes manifests
+    pipelines/        CI/CD configs
+    Dockerfile        Container definition
+    requirements.txt  Python dependencies
 
-Deploy: Kubernetes rolling update
+14. How to Run Locally
 
-🛠 Deployment Steps
-1️⃣ Build Docker Image
-docker build -t claim-status-api .
-
-2️⃣ Push to ECR
-docker push <account>.dkr.ecr.us-east-1.amazonaws.com/claim-status-api:latest
-
-3️⃣ Deploy to EKS
-kubectl apply -f deployment.yml
-kubectl apply -f service.yml
-
-4️⃣ Get Load Balancer URL
-kubectl get svc
+    uvicorn main:app --reload
 
 
-Access:
+Docker:
 
-http://<load-balancer-url>/docs
-
-🗄 DynamoDB Table
-
-Table name: claims
-
-Primary Key:
-
-claim_id (String)
-
-🤖 Bedrock Model Used
-
-Model:
-
-Claude 3 Haiku (Serverless)
-
-Used for:
-
-Claim reasoning
-
-Refund eligibility guidance
-
-Structured AI output
+    docker build -t claim-api .
+    docker run -p 8080:8080 claim-api
