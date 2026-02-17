@@ -1,5 +1,5 @@
 import boto3
-from fastapi import FastAPI
+from fastapi import FastAPI, Body
 from pydantic import BaseModel
 from decimal import Decimal
 import json
@@ -35,21 +35,35 @@ def create_claim(claim: Claim):
     )
 
     return {"message": "Claim created", "claimId": claim_id}
+
 @app.post("/analyze")
-def analyze(text: str):
+def analyze_claim(payload: dict = Body(...)):
+
+    text = payload.get("text")
+
+    if not text:
+        return {"error": "text field required"}
+
+    body = {
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": 200,
+        "messages": [
+            {
+                "role": "user",
+                "content": text
+            }
+        ]
+    }
 
     response = bedrock.invoke_model(
         modelId="anthropic.claude-3-haiku-20240307-v1:0",
-        body=json.dumps({
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 200,
-            "messages": [
-                {"role": "user", "content": text}
-            ]
-        })
+        body=json.dumps(body),
+        contentType="application/json",
+        accept="application/json"
     )
 
     result = json.loads(response["body"].read())
+
     return result
 
 @app.get("/claims/{claim_id}")
